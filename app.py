@@ -44,7 +44,7 @@ def format_entry(entry):
             formatted[key] = value
     return formatted
 
-@app.route('/get_details', methods=['GET'])
+@app.route('/info', methods=['GET'])
 def get_details():
     mobile_number = request.args.get('number')
 
