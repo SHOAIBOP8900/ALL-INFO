@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 import requests
 
 app = Flask(__name__)
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
 # Base URLs for the APIs
 MOBILE_INFO_API_BASE = "https://random-remove-batch-tea.trycloudflare.com/search?mobile="
@@ -44,7 +43,7 @@ def format_entry(entry):
             formatted[key] = value
     return formatted
 
-@app.route('/info', methods=['GET'])
+@app.route('/api/get_details', methods=['GET'])
 def get_details():
     mobile_number = request.args.get('number')
 
@@ -58,11 +57,10 @@ def get_details():
     all_results['MOBILE_INFO'] = {}
     try:
         mobile_info_url = f"{MOBILE_INFO_API_BASE}{mobile_number}"
-        mobile_response = requests.get(mobile_info_url)
+        mobile_response = requests.get(mobile_info_url, timeout=10)
         mobile_response.raise_for_status()
         mobile_data = mobile_response.json()
 
-        # Check if mobile_data has a 'data' key that contains the list
         data_list = None
         if isinstance(mobile_data, dict) and 'data' in mobile_data:
             data_list = mobile_data['data']
@@ -70,17 +68,14 @@ def get_details():
             data_list = mobile_data
 
         if data_list and isinstance(data_list, list):
-            # Format each entry with text wrapping
             formatted_data = [format_entry(entry) for entry in data_list]
             all_results['MOBILE_INFO'] = formatted_data
             
-            # Extract Aadhaar numbers
             for entry in data_list:
                 if 'id' in entry and isinstance(entry['id'], (int, str)):
                     potential_aadhar = str(entry['id'])
                     if len(potential_aadhar) == 12 and potential_aadhar.isdigit():
                         found_aadhar_numbers.add(potential_aadhar)
-
         else:
             all_results['MOBILE_INFO'] = {"warning": "No data found"}
 
@@ -93,11 +88,10 @@ def get_details():
         for aadhar_num in found_aadhar_numbers:
             try:
                 aadhar_info_url = f"{AADHAR_INFO_API_BASE}{aadhar_num}"
-                aadhar_response = requests.get(aadhar_info_url)
+                aadhar_response = requests.get(aadhar_info_url, timeout=10)
                 aadhar_response.raise_for_status()
                 aadhar_personal_data = aadhar_response.json()
                 
-                # Format data if it's a list
                 if isinstance(aadhar_personal_data, list):
                     formatted_personal = [format_entry(entry) for entry in aadhar_personal_data]
                 elif isinstance(aadhar_personal_data, dict):
@@ -123,11 +117,10 @@ def get_details():
         for aadhar_num in found_aadhar_numbers:
             try:
                 aadhar_family_url = f"{AADHAR_FAMILY_API_BASE}{aadhar_num}"
-                family_response = requests.get(aadhar_family_url)
+                family_response = requests.get(aadhar_family_url, timeout=10)
                 family_response.raise_for_status()
                 family_data = family_response.json()
                 
-                # Format family data
                 formatted_family = family_data
                 if isinstance(family_data, dict):
                     formatted_family = {}
@@ -153,6 +146,7 @@ def get_details():
 
     return jsonify(all_results)
 
-if __name__ == '__main__':
-    app.run(debug=True)
-l
+# Vercel handler
+def handler(request):
+    with app.app_context():
+        return app.full_dispatch_request()
