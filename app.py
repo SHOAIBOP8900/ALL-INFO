@@ -67,7 +67,7 @@ def safe_api_call(url, error_message="Failed to fetch data"):
     except Exception:
         return None, {"error": "An unexpected error occurred"}
 
-@app.route('/get_details', methods=['GET'])
+@app.route('/api', methods=['GET'])
 def get_details():
     mobile_number = request.args.get('number')
 
